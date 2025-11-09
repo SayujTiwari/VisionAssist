@@ -45,7 +45,7 @@ export default function DistanceBars({ left, front, right }: DistanceBarsProps) 
           className={`w-14 transition-all duration-500 rounded-t-md ${getColor(right)}`}
           style={{ height: `${rightHeight}%` }}
         ></div>
-        <span className="mt-2 text-sm text-gray-200">Left</span>
+        <span className="mt-2 text-sm text-gray-200">right</span>
       </div>
     </div>
   );

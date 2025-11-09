@@ -1,10 +1,10 @@
 import { updateGuidance, currentGuidance } from "@/utils/guidence"
 import { setValue } from "./state";
 
-
-const NUS_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const ARDUINO_NAME = 'VisionAssist'
+const NUS_SERVICE = 'c1d0a000-1234-4abc-bbbb-1234567890ab';
 const NUS_RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // write from browser → device
-const NUS_TX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // notify device → browser
+const NUS_TX = 'c1d0a001-1234-4abc-bbbb-1234567890ab'; // notify device → browser
 
 let gDevice: BluetoothDevice | null = null;
 let gServer: BluetoothRemoteGATTServer | null = null;
@@ -18,8 +18,8 @@ interface bleData {
 
 export async function connectBLE() {
     gDevice = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [NUS_SERVICE] }],
-        optionalServices: [NUS_SERVICE],
+        filters:[{services:[NUS_SERVICE]}],
+        optionalServices: [NUS_SERVICE]
     });
     gDevice.addEventListener('gattserverdisconnected', () => console.log('BLE disconnected'));
 
@@ -39,7 +39,9 @@ async function onBleNotification(e: Event) {
     const text = new TextDecoder().decode(bytes); // device → browser data (e.g., JSON or CSV)
 
     let tJson: bleData = JSON.parse(text)
-    await updateGuidance(tJson.left, tJson.right)
+    //await updateGuidance(tJson.left, tJson.right)
+
+    console.log(tJson+" "+tJson.left+" "+tJson.right)   
 
     setValue({msg:currentGuidance, front:0, left:tJson.left, right:tJson.right})
 
