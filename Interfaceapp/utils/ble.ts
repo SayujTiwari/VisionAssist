@@ -4,7 +4,7 @@ import { setValue } from "./state";
 const ARDUINO_NAME = 'VisionAssist'
 const NUS_SERVICE = 'c1d0a000-1234-4abc-bbbb-1234567890ab';
 const NUS_RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // write from browser → device
-const NUS_TX = 'c1d0a001-1234-4abc-bbbb-1234567890ab'; // notify device → browser
+const NUS_TX = "c1d0a001-1234-4abc-bbbb-1234567890ab"; // notify device → browser
 
 let gDevice: BluetoothDevice | null = null;
 let gServer: BluetoothRemoteGATTServer | null = null;
@@ -18,17 +18,25 @@ interface bleData {
 
 export async function connectBLE() {
     gDevice = await navigator.bluetooth.requestDevice({
-        filters:[{services:[NUS_SERVICE]}],
-        optionalServices: [NUS_SERVICE]
+        filters:[{services:[NUS_SERVICE]}]
     });
     gDevice.addEventListener('gattserverdisconnected', () => console.log('BLE disconnected'));
+    
+    let gattS = gDevice.gatt;
+    while(gattS == null) {
+        console.log("Getting Gatt");
+        gattS = gDevice.gatt;
+    }
 
-    gServer = await gDevice.gatt!.connect();
+    gServer = await gattS.connect();
+    console.log("Got gServer")
     const svc = await gServer.getPrimaryService(NUS_SERVICE);
-    rxChar = await svc.getCharacteristic(NUS_RX);
+    console.log("Got svc")
     txChar = await svc.getCharacteristic(NUS_TX);
+    console.log("Got txChar")
 
     await txChar.startNotifications();
+    console.log("Started txChar notifs")
     txChar.addEventListener('characteristicvaluechanged', onBleNotification);
     console.log('BLE connected');
 }

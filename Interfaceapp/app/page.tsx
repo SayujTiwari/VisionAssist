@@ -27,7 +27,6 @@ export default function Page() {
 
       <div className="text-lg">
         <p>Left Distance: {Number.isFinite(data.left) ? data.left.toFixed(2) : "—"} m</p>
-        <p>Front Distance: {Number.isFinite(data.front) ? data.front.toFixed(2) : "—"} m</p>
         <p>Right Distance: {Number.isFinite(data.right) ? data.right.toFixed(2) : "—"} m</p>
         <p>Alert: {data.msg}</p>
       </div>

@@ -9,10 +9,10 @@ interface DistanceBarsProps {
 
 export default function DistanceBars({ left, front, right }: DistanceBarsProps) {
   // Clamp distances to 0–2 m
-  const clamp = (val: number) => Math.min(Math.max(val, 0), 2);
-  const frontHeight = (1 - clamp(front) / 2) * 100; // invert so nearer → taller
-  const leftHeight = (1 - clamp(left) / 2) * 100;
-  const rightHeight = (1 - clamp(right) / 2) * 100;
+  const clamp = (val: number) => Math.min(Math.max(val, 0), 200);
+  const frontHeight = (1 - clamp(front) / 200) * 100; // invert so nearer → taller
+  const leftHeight = left>0? (1 - clamp(left) / 200) * 100 : 0;
+  const rightHeight =  right>0?(1 - clamp(right) / 200) * 100:0;
 
   const getColor = (dist: number) => {
     if (dist < 0.5) return "bg-red-500";
@@ -22,14 +22,6 @@ export default function DistanceBars({ left, front, right }: DistanceBarsProps) 
 
   return (
     <div className="flex items-end justify-center gap-16 h-64 w-96 bg-neutral-700/60 rounded-xl p-6 shadow-inner">
-      {/* Front bar */}
-      <div className="flex flex-col items-center justify-end h-full">
-        <div
-          className={`w-14 transition-all duration-500 rounded-t-md ${getColor(front)}`}
-          style={{ height: `${frontHeight}%` }}
-        ></div>
-        <span className="mt-2 text-sm text-gray-200">Front</span>
-      </div>
 
       {/* Left bar */}
       <div className="flex flex-col items-center justify-end h-full">
