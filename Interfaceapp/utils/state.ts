@@ -21,7 +21,7 @@ export function onValueChange(cb: Listener) {
   };
 }
 
-export function emitValue(data: procData) {
+export function setValue(data: procData) {
   current = data;
   listeners.forEach((f) => f(data));
 }
