@@ -1,58 +1,44 @@
 import asyncio
-import threading
-from flask import Flask, send_from_directory
-from flask_socketio import SocketIO
-from bleak import BleakClient, BleakScanner
+from bleak import BleakScanner, BleakClient
 
-# === BLE Identifiers (match Arduino) ===
-DEVICE_NAME = "VisonAssist"
+DEVICE_NAME = "VisionAssist"
 SERVICE_UUID = "c1d0a000-1234-4abc-bbbb-1234567890ab"
 CHAR_UUID = "c1d0a001-1234-4abc-bbbb-1234567890ab"
 
-app = Flask(__name__, static_folder="static")
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
-
-# === Bluetooth Logic ===
-async def connect_ble():
+async def main():
     print("Scanning for VisionAssist...")
     device = None
     devices = await BleakScanner.discover(timeout=5)
     for d in devices:
-        if DEVICE_NAME in d.name:
+        if d.name == DEVICE_NAME:
             device = d
             break
-    if not device:
-        print("Device not found.")
-        await asyncio.sleep(5)
-        return await connect_ble()
 
-    print(f"Connecting to {device.name} ({device.address})...")
+    if not device:
+        print("Device not found. Make sure VisionAssist is advertising.")
+        return
+
+    print(f"Found device: {device.name} [{device.address}]")
+
     async with BleakClient(device.address) as client:
         print("Connected:", client.is_connected)
 
-        def handle(_, data):
+        def handle(_, data: bytearray):
             try:
-                json_str = data.decode("utf-8")
-                socketio.emit("distance", {"data": json_str})
-                print(json_str)
+                msg = data.decode("utf-8").strip()
+                print(msg)
             except Exception as e:
                 print("Decode error:", e)
 
         await client.start_notify(CHAR_UUID, handle)
-        while True:
-            await asyncio.sleep(1)
+        print("Listening for data... (Ctrl+C to exit)")
 
-def ble_thread():
-    asyncio.run(connect_ble())
-
-threading.Thread(target=ble_thread, daemon=True).start()
-
-# === Flask Routes ===
-@app.route("/sensorInfo")
-def index():
-    return send_from_directory("static", "index.html")
+        try:
+            while True:
+                await asyncio.sleep(1)
+        except KeyboardInterrupt:
+            print("\nStopping notifications...")
+            await client.stop_notify(CHAR_UUID)
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=3000)
-
-
+    asyncio.run(main())
