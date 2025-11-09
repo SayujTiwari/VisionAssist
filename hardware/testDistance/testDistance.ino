@@ -8,25 +8,37 @@
 #define LED 9
 
 // BLE UUIDs
-#define SERVICE_UUID   "c1d0a000-1234-4abc-bbbb-1234567890ab"
-#define CHAR_UUID      "c1d0a001-1234-4abc-bbbb-1234567890ab"
+#define SERVICE_UUID "c1d0a000-1234-4abc-bbbb-1234567890ab"
+#define CHAR_UUID    "c1d0a001-1234-4abc-bbbb-1234567890ab"
 
-// LE Objects
+// BLE Objects
 BLEService visionService(SERVICE_UUID);
 BLEStringCharacteristic distChar(CHAR_UUID, BLERead | BLENotify, 64);
 
-// Ultrasonic Read Function
+// === Non-blocking distance function ===
 float getDistanceCM(int trigPin, int echoPin) {
-  // trigger pulse
+  // Trigger pulse
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
 
-  // measure echo
-  long duration = pulseIn(echoPin, HIGH, 250); // timeout ~4.3m
-  if (duration == 0) return -1;                  // no echo
+  // Wait for echo start (LOW → HIGH)
+  unsigned long startTime = micros();
+  while (digitalRead(echoPin) == LOW) {
+    BLE.poll();  // service BLE stack
+    if (micros() - startTime > 30000) return -1; // timeout 30 ms
+  }
+
+  // Measure HIGH duration
+  unsigned long echoStart = micros();
+  while (digitalRead(echoPin) == HIGH) {
+    BLE.poll();  // service BLE stack
+    if (micros() - echoStart > 30000) return -1; // timeout 30 ms
+  }
+
+  unsigned long duration = micros() - echoStart;
   return duration * 0.0343 / 2.0;
 }
 
@@ -54,8 +66,8 @@ void setup() {
   BLE.addService(visionService);
 
   distChar.writeValue("{\"status\":\"ready\"}");
-
   BLE.advertise();
+
   Serial.println("Advertising as VisionAssist...");
 }
 
@@ -68,24 +80,26 @@ void loop() {
     Serial.println(central.address());
 
     while (central.connected()) {
-      BLE.poll();
-      // float left = getDistanceCM(LEFT_TRIG, LEFT_ECHO);
-      // float right = getDistanceCM(RIGHT_TRIG, RIGHT_ECHO);
-      float left = 0;
-      float right = 0;
+      float left = getDistanceCM(LEFT_TRIG, LEFT_ECHO);
+      float right = getDistanceCM(RIGHT_TRIG, RIGHT_ECHO);
 
-      digitalWrite(LED, (left>0 && left<15) || (right>0 && right<15));
+      // LED on if object <15 cm on either side
+      digitalWrite(LED, (left > 0 && left < 15) || (right > 0 && right < 15));
 
       char jsonBuffer[80];
       snprintf(jsonBuffer, sizeof(jsonBuffer),
-              "{\"left\":%.1f,\"right\":%.1f}", left, right);
-      distChar.writeValue(jsonBuffer);   // auto-notifies
-      delay(200);                        // give BLE stack time
-    }
-    Serial.println("Disconnected");
-    BLE.advertise();
-      }
+               "{\"left\":%.1f,\"right\":%.1f}", left, right);
+
+      distChar.writeValue(jsonBuffer);
+      Serial.println(jsonBuffer);
 
       BLE.poll();
+      delay(200); // allow BLE to handle notifications
     }
 
+    Serial.println("Disconnected");
+    BLE.advertise();
+  }
+
+  BLE.poll();
+}
