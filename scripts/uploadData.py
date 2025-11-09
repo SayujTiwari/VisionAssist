@@ -5,7 +5,7 @@ from flask_socketio import SocketIO
 from bleak import BleakClient, BleakScanner
 
 # === BLE Identifiers (match Arduino) ===
-DEVICE_NAME = "VisionAssist"
+DEVICE_NAME = "VisonAssist"
 SERVICE_UUID = "c1d0a000-1234-4abc-bbbb-1234567890ab"
 CHAR_UUID = "c1d0a001-1234-4abc-bbbb-1234567890ab"
 
@@ -48,9 +48,11 @@ def ble_thread():
 threading.Thread(target=ble_thread, daemon=True).start()
 
 # === Flask Routes ===
-@app.route("/")
+@app.route("/sensorInfo")
 def index():
     return send_from_directory("static", "index.html")
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=8000)
+    socketio.run(app, host="0.0.0.0", port=3000)
+
+
