@@ -25,7 +25,7 @@ float getDistanceCM(int trigPin, int echoPin) {
   digitalWrite(trigPin, LOW);
 
   // measure echo
-  long duration = pulseIn(echoPin, HIGH, 25000); // timeout ~4.3m
+  long duration = pulseIn(echoPin, HIGH, 250); // timeout ~4.3m
   if (duration == 0) return -1;                  // no echo
   return duration * 0.0343 / 2.0;
 }
@@ -68,34 +68,24 @@ void loop() {
     Serial.println(central.address());
 
     while (central.connected()) {
-      BLE.poll();  // keep BLE stack responsive
+      BLE.poll();
+      // float left = getDistanceCM(LEFT_TRIG, LEFT_ECHO);
+      // float right = getDistanceCM(RIGHT_TRIG, RIGHT_ECHO);
+      float left = 0;
+      float right = 0;
 
-      float left = getDistanceCM(LEFT_TRIG, LEFT_ECHO);
-      float right = getDistanceCM(RIGHT_TRIG, RIGHT_ECHO);
+      digitalWrite(LED, (left>0 && left<15) || (right>0 && right<15));
 
-      // LED logic
-      if ((left > 0 && left < 15) || (right > 0 && right < 15)) {
-        digitalWrite(LED, HIGH);
-      } else {
-        digitalWrite(LED, LOW);
-      }
-
-      // create JSON
       char jsonBuffer[80];
       snprintf(jsonBuffer, sizeof(jsonBuffer),
-               "{\"left\":%.1f,\"right\":%.1f}", left, right);
-
-      distChar.writeValue(jsonBuffer);
-      Serial.println(jsonBuffer);
-
-      for (int i = 0; i < 10; i++) {
-        BLE.poll();
-        delay(20); // total 200 ms
+              "{\"left\":%.1f,\"right\":%.1f}", left, right);
+      distChar.writeValue(jsonBuffer);   // auto-notifies
+      delay(200);                        // give BLE stack time
+    }
+    Serial.println("Disconnected");
+    BLE.advertise();
       }
+
+      BLE.poll();
     }
 
-    Serial.println("Disconnected from central");
-  }
-
-  BLE.poll(); // keep advertising alive when idle
-}
