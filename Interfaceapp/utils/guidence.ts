@@ -29,9 +29,9 @@ Output only the instruction text.`;
 }
 
 // Optional direct test
-if (require.main === module) {
+/*if (require.main === module) {
   updateGuidance(30, 60);
-}
+}*/
 
 // Usage example in for other files.
 

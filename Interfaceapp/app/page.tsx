@@ -1,24 +1,35 @@
 "use client";
+
+import { onValueChange } from "@/utils/state";
+
 import useMockSensorData from "@/hooks/mockSensorData";
 import VoiceAlert from "@/components/voiceAlert";
 import DistanceBars from "@/components/distanceBars";
+import { connectBLE } from "@/utils/ble";
 
 
 export default function Page() {
-  const { front, left, alert } = useMockSensorData();
+  let data:{ msg:string, front:number, right:number, left:number } = {msg:"clear", front:0, left:0, right:0};
+
+  onValueChange((value) => {
+    data=value
+  });
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen gap-6">
       <h1 className="text-3xl font-bold">VisionAssist Dashboard</h1>
+
+      <button onClick={connectBLE}>Connect Bluetooth</button>
       
-      <DistanceBars front={front} left={left} />
+      <DistanceBars left={data.left} front={data.front} right={data.right} />
       <div className="text-lg">
-        <p>Front Distance: {front.toFixed(2)} m</p>
-        <p>Left Distance: {left.toFixed(2)} m</p>
-        <p>Alert: {alert}</p>
+        <p>Left Distance: {data.left.toFixed(2)} m</p>
+        <p>Front Distance: {data.front.toFixed(2)} m</p>
+        <p>Right Distance: {data.right.toFixed(2)} m</p>
+        <p>Alert: {data.msg}</p>
       </div>
 
-      <VoiceAlert alert={alert} />
+      <VoiceAlert alert={data.msg} />
     </main>
   );
 }
