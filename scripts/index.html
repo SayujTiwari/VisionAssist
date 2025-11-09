@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>VisionAssist Dashboard</title>
+  <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+  <style>
+    body { font-family: Arial; text-align: center; margin-top: 50px; }
+    .bar { width: 50px; height: 0; background: green; margin: 10px auto; transition: height 0.3s; }
+    .label { font-size: 1.2em; margin: 10px; }
+  </style>
+</head>
+<body>
+  <h1>VisionAssist Live Distance</h1>
+  <div class="label">Left</div>
+  <div id="leftBar" class="bar"></div>
+  <div class="label">Right</div>
+  <div id="rightBar" class="bar"></div>
+  <h2 id="jsonOut">Waiting...</h2>
+
+  <script>
+    const socket = io();
+    socket.on("distance", (msg) => {
+      try {
+        const data = JSON.parse(msg.data);
+        document.getElementById("jsonOut").innerText = JSON.stringify(data);
+        updateBar("leftBar", data.left);
+        updateBar("rightBar", data.right);
+      } catch (e) {
+        console.error("Parse error", e);
+      }
+    });
+
+    function updateBar(id, dist) {
+      const bar = document.getElementById(id);
+      let h = 0;
+      if (dist > 0) h = Math.max(0, 200 - dist * 10);
+      bar.style.height = h + "px";
+      bar.style.background = dist < 15 ? "red" : "green";
+    }
+  </script>
+</body>
+</html>
