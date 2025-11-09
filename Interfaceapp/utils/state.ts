@@ -1,25 +1,27 @@
-type Listener = (value: procData) => void;
-
+// utils/state.ts
 export interface procData {
-    msg: string;
-    front: number;
-    left: number;
-    right: number;
+  msg: string;
+  front: number;
+  left: number;
+  right: number;
 }
 
-let value = {msg:"", front:0, left:0, right:0};
-const listeners = new Set<Listener>();
-
-export function setValue(v: procData) {
-    value = v;
-    for (const fn of listeners) fn(v);
-}
-
-export function onValueChange(fn: Listener) {
-    listeners.add(fn);
-    return () => listeners.delete(fn);  // optional unsubscribe
-}
+type Listener = (data: procData) => void;
+let current: procData = { msg: "clear", front: 0, left: 0, right: 0 };
+let listeners: Listener[] = [];
 
 export function getValue() {
-    return value;
+  return current;
+}
+
+export function onValueChange(cb: Listener) {
+  listeners.push(cb);
+  return () => {
+    listeners = listeners.filter((f) => f !== cb);
+  };
+}
+
+export function emitValue(data: procData) {
+  current = data;
+  listeners.forEach((f) => f(data));
 }
