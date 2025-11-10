@@ -27,18 +27,16 @@ export async function connectBLE() {
       try {
         const json = JSON.parse(value);
 
-        // Convert cm → m for distances
-        const front = json.sensorObstacleRaw ? json.sensorObstacleRaw / 100 : 0;
-        const trench = json.sensorTrench ? json.sensorTrench / 100 : 0;
+        const obstacle = json.obstacleCM ? json.obstacleCM / 100 : 0;
+        const trench = json.trenchCM ? json.trenchCM / 100 : 0;
         const angle = json.angle ?? 0;
-        const horizontal = json.horizontal ?? 0;
 
         const msg =
-          front < 0.5 ? "obstacle ahead" :
+          obstacle < 0.5 ? "obstacle ahead" :
           trench < 0.5 ? "trench ahead" :
           "clear";
 
-        emitValue({ front, trench, angle, horizontal, msg });
+        emitValue({ obstacle, trench, angle, msg });
       } catch {
         console.warn("Invalid BLE data:", value);
       }
@@ -56,10 +54,9 @@ export async function connectBLE() {
 function simulateData() {
   setInterval(() => {
     const data = {
-      front: Math.random() * 2,
+      obstacle: Math.random() * 2,
       trench: Math.random() * 2,
-      angle: Math.random() * 90,
-      horizontal: Math.random() * 1,
+      angle: Math.random() * 180,
       msg: Math.random() < 0.3 ? "obstacle ahead" : "clear",
     };
     emitValue(data);

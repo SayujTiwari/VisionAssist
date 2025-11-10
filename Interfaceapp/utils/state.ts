@@ -1,19 +1,17 @@
 // utils/state.ts
 export interface procData {
-  front: number;       // derived from sensorObstacleRaw (m)
-  trench: number;      // derived from sensorTrench (m)
-  angle: number;
-  horizontal: number;
+  obstacle: number;   // m
+  trench: number;     // m
+  angle: number;      // degrees
   msg: string;
 }
 
 type Listener = (data: procData) => void;
 
 let current: procData = {
-  front: 0,
+  obstacle: 0,
   trench: 0,
   angle: 0,
-  horizontal: 0,
   msg: "waiting...",
 };
 
