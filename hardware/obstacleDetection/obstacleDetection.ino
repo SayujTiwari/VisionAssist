@@ -6,6 +6,7 @@
 #define OBST_ECHO 7
 #define TRENCH_TRIG 6
 #define TRENCH_ECHO 8
+#define BUZZER 4
 #define SERVO_PIN 10
 
 // === BLE setup ===
@@ -59,6 +60,7 @@ void setup() {
   pinMode(OBST_ECHO, INPUT);
   pinMode(TRENCH_TRIG, OUTPUT);
   pinMode(TRENCH_ECHO, INPUT);
+  pinMode(BUZZER, OUTPUT);
 
   scanServo.attach(SERVO_PIN);
   scanServo.write(150);
@@ -112,8 +114,16 @@ void loop() {
       float height = mountHeight + hyp * sin(thetaRad - PI / 2.0);
       bool valid = (height > 0);
 
+      // === Logic ===
       bool obstacle = (valid && horiz > 0 && horiz < obstacleLimit);
       bool trench = (trenchSmooth > trenchLimit);
+
+      // === Buzzer alert ===
+      if (obstacle || trench) {
+        tone(BUZZER, 1000); // 1 kHz tone
+      } else {
+        noTone(BUZZER);
+      }
 
       // === BLE JSON output ===
       char jsonBuffer[128];
@@ -126,10 +136,11 @@ void loop() {
       Serial.println(jsonBuffer);
 
       BLE.poll();
-      delay(200); // servo sweep speed
+      delay(200);
     }
 
     Serial.println("Disconnected");
+    noTone(BUZZER);
     BLE.advertise();
   }
 
