@@ -54,7 +54,6 @@ float getDistanceCM(int trigPin, int echoPin) {
 // === Setup ===
 void setup() {
   Serial.begin(9600);
-  while (!Serial);
 
   pinMode(OBST_TRIG, OUTPUT);
   pinMode(OBST_ECHO, INPUT);
