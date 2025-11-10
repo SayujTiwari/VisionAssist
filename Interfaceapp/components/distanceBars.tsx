@@ -57,9 +57,9 @@ export default function DistanceBars({ left, front, right }: DistanceBarsProps) 
   let rightAvg:Queue=new Queue(10);
   let leftAvg: Queue = new Queue(10);
 
-  const getColor = (dist: number) => {
-    if (dist < 0.5) return "bg-red-500";
-    if (dist < 1.0) return "bg-yellow-400";
+  const getColor = (height: number) => {
+    if (height > 75) return "bg-red-500";
+    if (height > 35) return "bg-yellow-400";
     return "bg-green-400";
   };
 
@@ -91,7 +91,7 @@ export default function DistanceBars({ left, front, right }: DistanceBarsProps) 
       {/* Left bar */}
       <div className="flex flex-col items-center justify-end h-full">
         <div
-          className={`w-14 transition-all duration-500 rounded-t-md ${getColor(left)}`}
+          className={`w-14 transition-all duration-500 rounded-t-md ${getColor(getLeft())}`}
           style={{ height: `${getLeft()}%` }}
         ></div>
         <span className="mt-2 text-sm text-gray-200">Left</span>
@@ -99,7 +99,7 @@ export default function DistanceBars({ left, front, right }: DistanceBarsProps) 
       {/* Right bar */}
       <div className="flex flex-col items-center justify-end h-full">
         <div
-          className={`w-14 transition-all duration-500 rounded-t-md ${getColor(right)}`}
+          className={`w-14 transition-all duration-500 rounded-t-md ${getColor(getLeft())}`}
           style={{ height: `${getRight()}%` }}
         ></div>
         <span className="mt-2 text-sm text-gray-200">right</span>
