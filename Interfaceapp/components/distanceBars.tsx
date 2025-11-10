@@ -94,7 +94,7 @@ export default function DistanceBars({ left, front, right }: DistanceBarsProps) 
           className={`w-14 transition-all duration-500 rounded-t-md ${getColor(getLeft())}`}
           style={{ height: `${getLeft()}%` }}
         ></div>
-        <span className="mt-2 text-sm text-gray-200">Left</span>
+        <span className="mt-2 text-sm font-medium text-gray-300">Obstacle</span>
       </div>
       {/* Right bar */}
       <div className="flex flex-col items-center justify-end h-full">
@@ -102,7 +102,7 @@ export default function DistanceBars({ left, front, right }: DistanceBarsProps) 
           className={`w-14 transition-all duration-500 rounded-t-md ${getColor(getLeft())}`}
           style={{ height: `${getRight()}%` }}
         ></div>
-        <span className="mt-2 text-sm text-gray-200">right</span>
+        <span className="mt-2 text-sm font-medium text-gray-300">Trench</span>
       </div>
     </div>
   );

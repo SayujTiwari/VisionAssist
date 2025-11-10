@@ -23,13 +23,15 @@ export default function Page() {
         Connect Bluetooth
       </button>
 
-      <DistanceBars left={data.left} front={data.front} right={data.right} />
+      <DistanceBars front={data.front} left={data.trench} right={data.angle} />
 
       <div className="text-lg">
-        <p>Left Distance: {Number.isFinite(data.left) ? data.left.toFixed(2) : "—"} m</p>
-        <p>Right Distance: {Number.isFinite(data.right) ? data.right.toFixed(2) : "—"} m</p>
+        <p>Front Distance: {Number.isFinite(data.front) ? data.front.toFixed(2) : "--"} m</p>
+        <p>Trench Distance: {Number.isFinite(data.trench) ? data.trench.toFixed(2) : "--"} m</p>
+        <p>Angle: {Number.isFinite(data.angle) ? data.angle.toFixed(0) : "--"}°</p>
         <p>Alert: {data.msg}</p>
       </div>
+
 
       <VoiceAlert alert={data.msg} />
     </main>

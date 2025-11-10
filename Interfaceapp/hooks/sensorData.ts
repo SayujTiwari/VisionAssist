@@ -23,8 +23,8 @@ export default function useSensorData(): SensorData {
         const json = await res.json();
 
         // Arduino sends {"left":x,"right":x}, no front value → infer or keep 0
-        const left = parseFloat(json.left ?? 0);
-        const right = parseFloat(json.right ?? 0);
+        const left = parseFloat(json.horizontal ?? 0);
+        const right = parseFloat(json.height ?? 0);
         const front = (left + right) / 2; // optional derived field
         const msg =
           left < 0.5 || right < 0.5

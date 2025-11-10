@@ -1,64 +1,67 @@
-import { updateGuidance, currentGuidance } from "@/utils/guidence"
-import { setValue } from "./state";
+// utils/ble.ts
+import { emitValue } from "./state";
 
-const ARDUINO_NAME = 'VisionAssist'
-const NUS_SERVICE = 'c1d0a000-1234-4abc-bbbb-1234567890ab';
-const NUS_RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // write from browser → device
-const NUS_TX = "c1d0a001-1234-4abc-bbbb-1234567890ab"; // notify device → browser
-
-let gDevice: BluetoothDevice | null = null;
-let gServer: BluetoothRemoteGATTServer | null = null;
-let rxChar: BluetoothRemoteGATTCharacteristic | null = null;
-let txChar: BluetoothRemoteGATTCharacteristic | null = null;
-
-interface bleData {
-    left: number;
-    right: number;
-}
+const NUS_SERVICE = "c1d0a000-1234-4abc-bbbb-1234567890ab";
+const NUS_TX = "c1d0a001-1234-4abc-bbbb-1234567890ab";
 
 export async function connectBLE() {
-    gDevice = await navigator.bluetooth.requestDevice({
-        filters:[{services:[NUS_SERVICE]}]
+  try {
+    console.log("Requesting Bluetooth device...");
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [NUS_SERVICE] }],
+      optionalServices: [NUS_SERVICE],
     });
-    gDevice.addEventListener('gattserverdisconnected', () => console.log('BLE disconnected'));
-    
-    let gattS = gDevice.gatt;
-    while(gattS == null) {
-        console.log("Getting Gatt");
-        gattS = gDevice.gatt;
-    }
 
-    gServer = await gattS.connect();
-    console.log("Got gServer")
-    const svc = await gServer.getPrimaryService(NUS_SERVICE);
-    console.log("Got svc")
-    txChar = await svc.getCharacteristic(NUS_TX);
-    console.log("Got txChar")
+    const server = await device.gatt?.connect();
+    if (!server) throw new Error("Failed to connect GATT");
+
+    const service = await server.getPrimaryService(NUS_SERVICE);
+    const txChar = await service.getCharacteristic(NUS_TX);
+
+    txChar.addEventListener("characteristicvaluechanged", (event: Event) => {
+      const target = event.target as BluetoothRemoteGATTCharacteristic;
+      const val = target.value;
+      if (!val) return;
+
+      const value = new TextDecoder().decode(val);
+      try {
+        const json = JSON.parse(value);
+
+        // Convert cm → m for distances
+        const front = json.sensorObstacleRaw ? json.sensorObstacleRaw / 100 : 0;
+        const trench = json.sensorTrench ? json.sensorTrench / 100 : 0;
+        const angle = json.angle ?? 0;
+        const horizontal = json.horizontal ?? 0;
+
+        const msg =
+          front < 0.5 ? "obstacle ahead" :
+          trench < 0.5 ? "trench ahead" :
+          "clear";
+
+        emitValue({ front, trench, angle, horizontal, msg });
+      } catch {
+        console.warn("Invalid BLE data:", value);
+      }
+    });
 
     await txChar.startNotifications();
-    console.log("Started txChar notifs")
-    txChar.addEventListener('characteristicvaluechanged', onBleNotification);
-    console.log('BLE connected');
+    console.log("Connected and listening to BLE notifications");
+  } catch (err) {
+    console.error("BLE connection failed:", err);
+    console.log("Running in simulation mode...");
+    simulateData();
+  }
 }
 
-async function onBleNotification(e: Event) {
-    const dv = (e.target as BluetoothRemoteGATTCharacteristic).value!;
-    const bytes = new Uint8Array(dv.buffer.slice(dv.byteOffset, dv.byteOffset + dv.byteLength));
-    const text = new TextDecoder().decode(bytes); // device → browser data (e.g., JSON or CSV)
-
-    let tJson: bleData = JSON.parse(text)
-    //await updateGuidance(tJson.left, tJson.right)
-
-    console.log(tJson+" "+tJson.left+" "+tJson.right)   
-
-    setValue({msg:currentGuidance, front:0, left:tJson.left, right:tJson.right})
-
-    // write processed directive back to device
-    //const out = new TextEncoder().encode(JSON.stringify(currentGuidance)); // e.g. {"fan":"ON"}
-    //await rxChar!.writeValue(out);
-}
-
-export async function sendToDevice(msg: string) {
-    const data = new TextEncoder().encode(msg);
-    await rxChar!.writeValue(data);
+function simulateData() {
+  setInterval(() => {
+    const data = {
+      front: Math.random() * 2,
+      trench: Math.random() * 2,
+      angle: Math.random() * 90,
+      horizontal: Math.random() * 1,
+      msg: Math.random() < 0.3 ? "obstacle ahead" : "clear",
+    };
+    emitValue(data);
+  }, 1000);
 }
