@@ -17,17 +17,17 @@ BLEStringCharacteristic distChar(CHAR_UUID, BLERead | BLENotify, 128);
 
 Servo scanServo;
 
-// === Constants ===
-const float alpha = 0.2;       // smoothing factor
-const float mountHeight = 1.0; // meters
-const float obstacleLimit = 80.0; // meters
-const float trenchLimit = 110.0;   // cm
+// === Constants (cm) ===
+const float alpha = 0.2;
+const float mountHeight = 100.0;
+const float obstacleTrigger = 120.0; // start reacting at 120 cm
+const float trenchLimit = 110.0;     // ground missing beyond 110 cm → trench
 
 // === Globals ===
 float obstSmooth = 0;
 float trenchSmooth = 0;
 
-// === Distance function (non-blocking) ===
+// === Distance function (returns -1 if no echo) ===
 float getDistanceCM(int trigPin, int echoPin) {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -38,7 +38,7 @@ float getDistanceCM(int trigPin, int echoPin) {
   unsigned long start = micros();
   while (digitalRead(echoPin) == LOW) {
     BLE.poll();
-    if (micros() - start > 30000) return -1;
+    if (micros() - start > 30000) return -1;  // timeout
   }
 
   unsigned long echoStart = micros();
@@ -48,7 +48,7 @@ float getDistanceCM(int trigPin, int echoPin) {
   }
 
   unsigned long duration = micros() - echoStart;
-  return duration * 0.0343 / 2.0; // cm
+  return duration * 0.0343 / 2.0;  // cm
 }
 
 // === Setup ===
@@ -92,51 +92,62 @@ void loop() {
     Serial.println(central.address());
 
     while (central.connected()) {
-      // === Servo oscillation ===
+      // === Servo sweep ===
       scanServo.write(angle);
       angle += step;
       if (angle <= 30 || angle >= 150) step = -step;
 
-      // === Distance readings ===
+      // === Read sensors ===
       float obstRaw = getDistanceCM(OBST_TRIG, OBST_ECHO);
       float trenchRaw = getDistanceCM(TRENCH_TRIG, TRENCH_ECHO);
 
-      if (obstSmooth == 0 && obstRaw > 0) obstSmooth = obstRaw;
-      if (trenchSmooth == 0 && trenchRaw > 0) trenchSmooth = trenchRaw;
+      // ignore invalid (-1) readings
+      if (obstRaw > 0) {
+        if (obstSmooth == 0) obstSmooth = obstRaw;
+        obstSmooth = alpha * obstRaw + (1 - alpha) * obstSmooth;
+      }
+      if (trenchRaw > 0) {
+        if (trenchSmooth == 0) trenchSmooth = trenchRaw;
+        trenchSmooth = alpha * trenchRaw + (1 - alpha) * trenchSmooth;
+      }
 
-      if (obstRaw > 0) obstSmooth = alpha * obstRaw + (1 - alpha) * obstSmooth;
-      if (trenchRaw > 0) trenchSmooth = alpha * trenchRaw + (1 - alpha) * trenchSmooth;
+      // === Detection logic ===
+      bool obstacleDetected = (obstSmooth > 0 && obstSmooth < obstacleTrigger);
+      bool trenchDetected = (trenchRaw == -1 || trenchSmooth > trenchLimit);
 
-      // === Trigonometric correction ===
-      float thetaRad = radians(angle);
-      float hyp = obstSmooth / 100.0; // convert cm → m
-      float horiz = hyp * cos(thetaRad - PI / 2.0);
-      float height = mountHeight + hyp * sin(thetaRad - PI / 2.0);
-      bool valid = (height > 0);
+      // === Adaptive buzzer ===
+      if (obstacleDetected) {
+        // closer → higher frequency and faster pulse
+        int freq = map((int)obstSmooth, 120, 20, 200, 2000);
+        freq = constrain(freq, 200, 2000);
+        int beepDur = map((int)obstSmooth, 120, 20, 300, 50);
 
-      // === Logic ===
-      bool obstacle = (valid && horiz > 0 && horiz < obstacleLimit);
-      bool trench = (trenchSmooth > trenchLimit);
-
-      // === Buzzer alert ===
-      if (obstacle || trench) {
-        tone(BUZZER, 1000); // 1 kHz tone
-      } else {
+        tone(BUZZER, freq);
+        delay(beepDur);
+        noTone(BUZZER);
+        delay(beepDur);
+      }
+      else if (trenchDetected) {
+        // constant warning for trench / missing ground
+        tone(BUZZER, 800);
+        delay(150);
+        noTone(BUZZER);
+        delay(150);
+      }
+      else {
         noTone(BUZZER);
       }
 
       // === BLE JSON output ===
       char jsonBuffer[128];
       snprintf(jsonBuffer, sizeof(jsonBuffer),
-        "{\"angle\":%d,\"sensorObstacleRaw\":%.2f,\"horizontal\":%.2f,"
-        "\"height\":%.2f,\"sensorTrench\":%.2f}",
-        angle, obstSmooth, horiz, height, trenchSmooth);
-
+        "{\"angle\":%d,\"obstacleCM\":%.1f,\"trenchCM\":%.1f}",
+        angle, obstSmooth, trenchSmooth);
       distChar.writeValue(jsonBuffer);
       Serial.println(jsonBuffer);
 
       BLE.poll();
-      delay(200);
+      delay(100);
     }
 
     Serial.println("Disconnected");
